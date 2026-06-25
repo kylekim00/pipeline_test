@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.distributed as dist
+import rand_seed
 
-torch.manual_seed(1234)
+# torch.manual_seed(1234)
+seed = 1234
 
 
 dist.init_process_group('gloo')
@@ -35,8 +37,10 @@ class TestFunc2(torch.autograd.Function):
 class TestNN(nn.Module):
     def __init__(self):
         super().__init__()
+        rand_seed.fix_seed(seed+rank)
         self.fc1 = nn.Linear(10, 5) # should be initialized differently later on.
         self.fc2 = nn.Linear(5, 5, bias=False) 
+        rand_seed.fix_seed(seed)
         self.bias = nn.Parameter(torch.randn(size=(5,)))
 
 
@@ -46,6 +50,7 @@ class TestNN(nn.Module):
         h2 = self.fc2(h1)
         out = TestFunc2.apply(h2)
         return out + self.bias
+
 
 
 

@@ -5,14 +5,7 @@ import torch
 
 
 def fix_seed(seed: int = 42, deterministic: bool = True, warn_only: bool = True):
-    """
-    PyTorch 실험용 seed 고정 함수.
-    rank별 seed가 필요하면 호출할 때 직접 seed + rank처럼 넘기면 됨.
 
-    예:
-        fix_seed(1234)          # 모든 rank 같은 seed
-        fix_seed(1234 + rank)   # rank마다 다른 seed
-    """
 
     os.environ["PYTHONHASHSEED"] = str(seed)
 
