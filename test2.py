@@ -1,58 +1,68 @@
 import torch
 import torch.distributed as dist
 import torch.nn as nn
+from buffer import *
 
 dist.init_process_group('gloo')
 rank = dist.get_rank()
 
-class RecvFunc(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, X, rank):
-        dist.recv()
-        ctx.save_for_backward(rank)
-        return X
-    
-    @staticmethod
-    def backward(ctx, grad_output):
-        (rank, ) = ctx.saved_tensors
-        dist.send(grad_output)
-        return grad_output
+def scheduler(step):
+    f0 = step % 4
+    f1 = step % 4 + 1
+    f2 = step % 4 + 2
+    f3 = step % 4 + 3
+    return f0, f1, f2, f3
 
 
-class SendFunc(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, X, rank):
-        dist.send(X, dst=rank)
-        ctx.save_for_backward(rank)
-        return X
-    
-    @staticmethod
-    def backward(ctx, grad_output):
-        (rank, ) = ctx.saved_tensors
-        dist.send(grad_output)
-        return grad_output
+class MicroBatchContent:
+    def __init__(self):
+        self.x = None
+        self.y = None
+        
 
-
-
-
-class DistLinear(nn.Module):
+class PipelineStage:
     def __init__(
             self, 
-            in_features, 
-            out_features, 
-            batch_features=1, 
-            rank=0
+            module:nn.Module, 
+            input_size,
+            output_size,
+            prev_node, 
+            next_node
             ):
-        super().__init__()
-        self.model = nn.Linear(in_features, out_features)
-        self.recv_buf = torch.empty([batch_features, in_features])
+        self.module = module
+        self.prev_node = prev_node
+        self.next_node = next_node
+        self.input_size = input_size
+        self.output_size = output_size
+        self.ctxs = {}
 
 
+    def forward_recv(self, mb_id)->torch.Tensor:
+        X = torch.empty(self.input_size)
+        dist.recv(
+            tensor=X,
+            src=self.prev_node,
+            tag=0
+        )
+        return X
+    
+    def forward_send(self, mb_id, Y)->None:
+        dist.send(
+            tensor= Y,
+            dst=self.next_node,
+            tag=0
+        )
     
 
+        
+    def forward_step(self, mb_id, X):
+        
+        
+        
 
-    def forward(self, X):
-        pass
+        
+        
+
 
 
 
